@@ -217,7 +217,7 @@ def send_emails():
             smtp_server.starttls()
             
             # Log in to your email account
-            smtp_server.login('mhmtsoylu1928@gmail.com', 'ytit koka hcmw ubiy')
+            smtp_server.login('your-email-address', 'your-app-password')
             
             for recipient in email_addresses:
                 # Create the email
