@@ -13,7 +13,7 @@ root.title("News Scraper and Email Sender")
 root.geometry("600x400")  # Adjusted window size for better layout
 
 # Set the window icon
-icon_path = r"C:\\Users\\mhmts\\PycharmProjects\\news-scraping-app-project\\newspaper_news_icon.png"
+icon_path = "newspaper_news_icon.png"
 icon = tk.PhotoImage(file=icon_path)
 root.iconphoto(True, icon)
 
