@@ -1,6 +1,9 @@
+
 import tkinter as tk
-from tkinter import ttk
+# from tkinter import ttk
+import time
 import requests
+from requests.exceptions import ConnectionError, Timeout
 from bs4 import BeautifulSoup
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -49,6 +52,17 @@ news_sites = [
 # Dictionary to hold the state of each checkbox
 checkbox_vars = {}
 
+# Add select all check box
+def toggle_select_all():
+    select_all_state = select_all_var.get()
+    for url, (var, name) in checkbox_vars.items():
+        var.set(select_all_state)
+
+select_all_var = tk.BooleanVar()
+
+select_all_checkbox = tk.Checkbutton(frame1, text="Select All", variable=select_all_var, command=toggle_select_all)
+select_all_checkbox.pack(anchor="w", pady=(0, 10))
+
 # Add checkboxes to Frame 1
 for url, name in news_sites:
     var = tk.BooleanVar()
@@ -65,127 +79,165 @@ email_section_title_label.pack(anchor="w", pady=(0, 10))
 email_text = tk.Text(frame2, height=10, width=30)
 email_text.pack(fill="both", expand=True)
 
-# Function to scrape headlines and URLs based on site structure
 def scrape_website(site_name, url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'lxml')
-    
-    headlines = []
-    
-    if "hurriyet.com.tr" in url:
-        # Scrape <h2> tags, find the <a> tag inside, and get the text and href
-        for item in soup.find_all('h2'):
-            a_tag = item.find('a', href=True)
-            if a_tag:
-                headline = a_tag.get_text().strip()
-                link = a_tag['href']
-                # Ensure the link is absolute
-                if not link.startswith("http"):
-                    link = f"https://www.hurriyet.com.tr{link}"
-                if headline and link:
-                    headlines.append(f"{headline}: {link}")
+# Function to scrape headlines and URLs based on site structure
+    retries = 3  # Number of retries if a request fails
+    delay = 5    # Delay between retries (in seconds)    
+        
+    for attempt in range(retries):
+        try:
+            response = requests.get(url, timeout=15)  # Increased timeout
+            soup = BeautifulSoup(response.text, 'lxml')
+
+            headlines = []
+            
+            if "hurriyet.com.tr" in url:
+                # Scrape <h2> tags, find the <a> tag inside, and get the text and href
+                for item in soup.find_all('h2'):
+                    a_tag = item.find('a', href=True)
+                    if a_tag:
+                        headline = a_tag.get_text().strip()
+                        link = a_tag['href']
+                        # Ensure the link is absolute
+                        if not link.startswith("http"):
+                            link = f"https://www.hurriyet.com.tr{link}"
+                        if headline and link:
+                            headlines.append(f"{headline}: {link}")
+                        
+            elif "sabah.com.tr" in url:
+                # Scrape <a> tags, find the <span> tag inside, and get the text and href
+                for item in soup.find_all('a', href=True):
+                    span_tag = item.find('span')
+                    if span_tag:
+                        headline = span_tag.get_text().strip()
+                        link = item['href']
+                        # Ensure the link is absolute
+                        if not link.startswith("http"):
+                            link = f"https://www.sabah.com.tr{link}"
+                        if headline and link:
+                            headlines.append(f"{headline}: {link}")
+                        
+            elif "milliyet.com.tr" in url:
+                # Scrape <a> tags, find the <img> tag inside, and get the text from the "alt" attribute
+                for item in soup.find_all('a', href=True, class_='cat-slider__link'):
+                    img_tag = item.find('img', alt=True)
+                    if img_tag:
+                        headline = img_tag['alt'].strip()
+                        link = item['href']
+                        # Ensure the link is absolute
+                        if not link.startswith("http"):
+                            link = f"https://www.milliyet.com.tr{link}"
+                        if headline and link:
+                            headlines.append(f"{headline}: {link}")
                 
-    elif "sabah.com.tr" in url:
-        # Scrape <a> tags, find the <span> tag inside, and get the text and href
-        for item in soup.find_all('a', href=True):
-            span_tag = item.find('span')
-            if span_tag:
-                headline = span_tag.get_text().strip()
-                link = item['href']
-                # Ensure the link is absolute
-                if not link.startswith("http"):
-                    link = f"https://www.sabah.com.tr{link}"
-                if headline and link:
-                    headlines.append(f"{headline}: {link}")
+                for item in soup.find_all('h3', class_='category-card__head'):
+                    a_tag = item.find_parent('a', href=True)  # Find the parent <a> tag to get the link
+                    if a_tag:
+                        headline = item.get_text().strip()
+                        link = a_tag['href']
+                        # Ensure the link is absolute
+                        if not link.startswith("http"):
+                            link = f"https://www.milliyet.com.tr{link}"
+                        if headline and link:
+                            headlines.append(f"{headline}: {link}")
+            
+            elif "haberturk.com" in url:
+                # Scrape <a> tags and get the text from the "title" attribute
+                for item in soup.find_all('a', href=True, class_='gtm-tracker'):
+                    headline = item.get('title', '').strip()
+                    link = item['href']
+                    # Ensure the link is absolute
+                    if not link.startswith("http"):
+                        link = f"https://www.haberturk.com{link}"
+                    if headline and link:
+                        headlines.append(f"{headline}: {link}")
+            
+            elif "aa.com.tr" in url:
+                        # Scrape <h2> tags, find the <a> tag inside, and get the text and href
+                        for item in soup.find_all('h2', class_='pad-5'):
+                            a_tag = item.find('a', href=True)
+                            if a_tag:
+                                headline = a_tag.get_text().strip()
+                                link = a_tag['href']
+                                # Ensure the link is absolute
+                                if not link.startswith("http"):
+                                    link = f"https://www.aa.com.tr/tr/ekonomi{link}"
+                                if headline and link:
+                                    headlines.append(f"{headline}: {link}")
+            
+            elif "dha.com.tr" in url:
+                # Scrape <a> tags, find the <strong> tag inside, and get the text and href
+                for item in soup.find_all('a', href=True, class_='cat-slider__link'):
+                    strong_tag = item.find('strong', class_='cat-slider__title')
+                    if strong_tag:
+                        headline = strong_tag.get_text().strip()
+                        link = item['href']
+                        # Ensure the link is absolute
+                        if not link.startswith("http"):
+                            link = f"https://www.dha.com.tr{link}"
+                        if headline and link:
+                            headlines.append(f"{headline}: {link}")
                 
-    elif "milliyet.com.tr" in url:
-        # Scrape <a> tags, find the <img> tag inside, and get the text from the "alt" attribute
-        for item in soup.find_all('a', href=True, class_='cat-slider__link'):
-            img_tag = item.find('img', alt=True)
-            if img_tag:
-                headline = img_tag['alt'].strip()
-                link = item['href']
-                # Ensure the link is absolute
-                if not link.startswith("http"):
-                    link = f"https://www.milliyet.com.tr{link}"
-                if headline and link:
-                    headlines.append(f"{headline}: {link}")
-    
-    elif "haberturk.com" in url:
-        # Scrape <a> tags and get the text from the "title" attribute
-        for item in soup.find_all('a', href=True, class_='gtm-tracker'):
-            headline = item.get('title', '').strip()
-            link = item['href']
-            # Ensure the link is absolute
-            if not link.startswith("http"):
-                link = f"https://www.haberturk.com{link}"
-            if headline and link:
-                headlines.append(f"{headline}: {link}")
-    
-    elif "aa.com.tr" in url:
-        # Scrape <h2> tags, find the <a> tag inside, and get the text and href
-        for item in soup.find_all('h2', class_='pad-5'):
-            a_tag = item.find('a', href=True)
-            if a_tag:
-                headline = a_tag.get_text().strip()
-                link = a_tag['href']
-                # Ensure the link is absolute
-                if not link.startswith("http"):
-                    link = f"https://www.aa.com.tr{link}"
-                if headline and link:
-                    headlines.append(f"{headline}: {link}")
-    
-    elif "dha.com.tr" in url:
-        # Scrape <a> tags, find the <strong> tag inside, and get the text and href
-        for item in soup.find_all('a', href=True, class_='cat-slider__link'):
-            strong_tag = item.find('strong', class_='cat-slider__title')
-            if strong_tag:
-                headline = strong_tag.get_text().strip()
-                link = item['href']
-                # Ensure the link is absolute
-                if not link.startswith("http"):
-                    link = f"https://www.dha.com.tr{link}"
-                if headline and link:
-                    headlines.append(f"{headline}: {link}")
-    
-    elif "ntv.com.tr" in url:
-        # Scrape <a> tags and get the text from the "title" attribute
-        for item in soup.find_all('a', href=True):
-            headline = item.get('title', '').strip()
-            link = item['href']
-            # Ensure the link is absolute
-            if not link.startswith("http"):
-                link = f"https://www.ntv.com.tr{link}"
-            if headline and link:
-                headlines.append(f"{headline}: {link}")
-    
-    elif "yenisafak.com" in url:
-        # Check for headline in the "alt" attribute of the <img> tag within the <a> tag
-        for item in soup.find_all('a', href=True):
-            img_tag = item.find('img', alt=True)
-            if img_tag:
-                headline = img_tag['alt'].strip()
-                link = item['href']
-                # Ensure the link is absolute
-                if not link.startswith("http"):
-                    link = f"https://www.yenisafak.com{link}"
-                if headline and link:
-                    headlines.append(f"{headline}: {link}")
-    
-    elif "ensonhaber.com" in url:
-        # Scrape <a> tags, find the <img> tag inside, and get the text from the "alt" attribute
-        for item in soup.find_all('a', href=True):
-            img_tag = item.find('img', alt=True)
-            if img_tag:
-                headline = img_tag['alt'].strip()
-                link = item['href']
-                # Ensure the link is absolute
-                if not link.startswith("http"):
-                    link = f"https://www.ensonhaber.com{link}"
-                if headline and link:
-                    headlines.append(f"{headline}: {link}")
-    
-    return site_name, headlines
+                for item in soup.find_all('h3', class_='category-card__head'):
+                    a_tag = item.find_parent('a', href=True)  # Find the parent <a> tag to get the link
+                    if a_tag:
+                        headline = item.get_text().strip()
+                        link = a_tag['href']
+                        # Ensure the link is absolute
+                        if not link.startswith("http"):
+                            link = f"https://www.dha.com.tr{link}"
+                        if headline and link:
+                            headlines.append(f"{headline}: {link}")
+            
+            elif "ntv.com.tr" in url:
+                # Scrape <a> tags and get the text from the "title" attribute
+                for item in soup.find_all('a', href=True):
+                    headline = item.get('title', '').strip()
+                    link = item['href']
+                    # Ensure the link is absolute
+                    if not link.startswith("http"):
+                        link = f"https://www.ntv.com.tr{link}"
+                    if headline and link:
+                        headlines.append(f"{headline}: {link}")
+            
+            elif "yenisafak.com" in url:
+                # Check for headline in the "alt" attribute of the <img> tag within the <a> tag
+                for item in soup.find_all('a', href=True):
+                    img_tag = item.find('img', alt=True)
+                    if img_tag:
+                        headline = img_tag['alt'].strip()
+                        link = item['href']
+                        # Ensure the link is absolute
+                        if not link.startswith("http"):
+                            link = f"https://www.yenisafak.com{link}"
+                        if headline and link:
+                            headlines.append(f"{headline}: {link}")
+            
+            elif "ensonhaber.com" in url:
+                # Scrape <a> tags, find the <img> tag inside, and get the text from the "alt" attribute
+                for item in soup.find_all('a', href=True):
+                    img_tag = item.find('img', alt=True)
+                    if img_tag:
+                        headline = img_tag['alt'].strip()
+                        link = item['href']
+                        # Ensure the link is absolute
+                        if not link.startswith("http"):
+                            link = f"https://www.ensonhaber.com{link}"
+                        if headline and link:
+                            headlines.append(f"{headline}: {link}")
+            
+            return site_name, headlines
+        
+        except (ConnectionError, Timeout) as e:
+                print(f"Attempt {attempt + 1} failed for {url}: {e}")
+                if attempt < retries - 1:
+                    time.sleep(delay)  # Wait before retrying
+                else:
+                    print(f"Failed to retrieve data from {url} after {retries} attempts")
+                    return site_name, []
+        except Exception as e:
+                print(f"An error occurred while scraping {url}: {e}")
+                return site_name, []
 
 # SEND button
 def send_emails():
