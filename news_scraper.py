@@ -16,7 +16,7 @@ root.title("News Scraper and Email Sender")
 root.geometry("600x400")  # Adjusted window size for better layout
 
 # Set the window icon
-icon_path = r"C:\\Users\\mhmts\\PycharmProjects\\news-scraping-app-project\\newspaper_news_icon.png"
+icon_path = "newspaper_news_icon.png"
 icon = tk.PhotoImage(file=icon_path)
 root.iconphoto(True, icon)
 
@@ -269,7 +269,7 @@ def send_emails():
             smtp_server.starttls()
             
             # Log in to your email account
-            smtp_server.login('mhmtsoylu1928@gmail.com', 'ytit koka hcmw ubiy')
+            smtp_server.login('your-email-address', 'your-app-password')
             
             for recipient in email_addresses:
                 # Create the email
