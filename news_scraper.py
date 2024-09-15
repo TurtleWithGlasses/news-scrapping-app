@@ -16,7 +16,7 @@ root.title("News Scraper and Email Sender")
 root.geometry("600x400")  # Adjusted window size for better layout
 
 # Set the window icon
-icon_path = "newspaper_news_icon.png"
+icon_path = r"C:\\Users\\mhmts\\PycharmProjects\\news-scraping-app-project\\newspaper_news_icon.png"
 icon = tk.PhotoImage(file=icon_path)
 root.iconphoto(True, icon)
 
@@ -46,7 +46,8 @@ news_sites = [
     ("https://www.dha.com.tr/ekonomi/", "DHA"),
     ("https://www.ntv.com.tr/ntvpara", "NTV"),
     ("https://www.yenisafak.com/ekonomi", "Yeni Safak"),
-    ("https://www.ensonhaber.com/ekonomi", "En Son Haber")
+    ("https://www.ensonhaber.com/ekonomi", "En Son Haber"),
+    ("https://www.iha.com.tr/ekonomi", "İHA")
 ]
 
 # Dictionary to hold the state of each checkbox
@@ -201,17 +202,24 @@ def scrape_website(site_name, url):
                         headlines.append(f"{headline}: {link}")
             
             elif "yenisafak.com" in url:
-                # Check for headline in the "alt" attribute of the <img> tag within the <a> tag
-                for item in soup.find_all('a', href=True):
-                    img_tag = item.find('img', alt=True)
-                    if img_tag:
-                        headline = img_tag['alt'].strip()
-                        link = item['href']
+
+                # Find all divs with the class 'ys-link news-item'
+                for item in soup.find_all('div', class_='ys-link news-item'):
+                    # Extract the link from the <a> tag
+                    a_tag = item.find('a', href=True)
+                    if a_tag:
+                        link = a_tag['href']
                         # Ensure the link is absolute
                         if not link.startswith("http"):
                             link = f"https://www.yenisafak.com{link}"
-                        if headline and link:
-                            headlines.append(f"{headline}: {link}")
+                        
+                        # Extract the headline from the <p class="news-title">
+                        p_tag = item.find('p', class_='news-title')
+                        if p_tag:
+                            headline = p_tag.get_text().strip()
+                            if headline and link:
+                                headlines.append(f"{headline}: {link}")
+
             
             elif "ensonhaber.com" in url:
                 # Scrape <a> tags, find the <img> tag inside, and get the text from the "alt" attribute
@@ -225,6 +233,18 @@ def scrape_website(site_name, url):
                             link = f"https://www.ensonhaber.com{link}"
                         if headline and link:
                             headlines.append(f"{headline}: {link}")
+            
+            elif "iha.com.tr" in url:
+                # Scrape <a> tags and get the text from the "title" attribute
+                for item in soup.find_all('a', href=True):
+                    title = item.get('title', '').strip()
+                    if title:
+                        link = item['href']
+                        # Ensure the link is absolute
+                        if not link.startswith("http"):
+                            link = f"https://www.iha.com.tr{link}"
+                        headlines.append(f"{title}: {link}")
+
             
             return site_name, headlines
         
@@ -269,7 +289,7 @@ def send_emails():
             smtp_server.starttls()
             
             # Log in to your email account
-            smtp_server.login('your-email-address', 'your-app-password')
+            smtp_server.login('mhmtsoylu1928@gmail.com', 'ytit koka hcmw ubiy')
             
             for recipient in email_addresses:
                 # Create the email
