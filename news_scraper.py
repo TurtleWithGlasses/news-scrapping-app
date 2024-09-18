@@ -1,6 +1,5 @@
 
 import tkinter as tk
-# from tkinter import ttk
 import time
 import requests
 from requests.exceptions import ConnectionError, Timeout
@@ -15,10 +14,7 @@ root = tk.Tk()
 root.title("News Scraper and Email Sender")
 root.geometry("600x400")  # Adjusted window size for better layout
 
-# Set the window icon
-icon_path = r"C:\\Users\\mhmts\\PycharmProjects\\news-scraping-app-project\\newspaper_news_icon.png"
-icon = tk.PhotoImage(file=icon_path)
-root.iconphoto(True, icon)
+EMAIL_FILE = "email.txt"
 
 # Create Frame 1 (for the list of news sites with checkboxes)
 frame1 = tk.Frame(root, padx=10, pady=10)
@@ -79,6 +75,19 @@ email_section_title_label.pack(anchor="w", pady=(0, 10))
 # Text area for email addresses
 email_text = tk.Text(frame2, height=10, width=30)
 email_text.pack(fill="both", expand=True)
+
+def load_emails():
+    try:
+        with open(EMAIL_FILE, "r") as file:
+            emails = file.read()
+            email_text.insert("1.0", emails)
+    except FileNotFoundError:
+        pass
+
+def save_emails():
+    emails = email_text.get("1.0", tk.END).strip()
+    with open(EMAIL_FILE, "w") as file:
+        file.write(emails)
 
 def scrape_website(site_name, url):
 # Function to scrape headlines and URLs based on site structure
@@ -324,5 +333,13 @@ send_button.pack(pady=(10, 5))
 # Status label
 status_label = tk.Label(frame2, text="")
 status_label.pack()
+
+def on_closing():
+    save_emails()
+    root.destroy()
+
+root.protocol("WM_DELETE_WINDOW", on_closing)
+
+load_emails()
 
 root.mainloop()
